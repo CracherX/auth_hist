@@ -1,0 +1,12 @@
+server:
+  app_name: "Authorization service"
+  port: ":8080"
+  debug: true
+  secret_path: "secrets/secret.txt"
+database:
+  user: "Cracher"
+  password: "10840"
+  host: "localhost"
+  port: "5432"
+  name: "test_hist"
+  ssl_mode: "disable"
