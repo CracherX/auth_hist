@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"github.com/CracherX/auth_hist/internal/config"
+	"github.com/CracherX/auth_hist/internal/storage/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
@@ -15,6 +16,7 @@ func Connect(cfg *config.Config, retr int) (db *gorm.DB, err error) {
 	for i := 0; i <= retr; i++ {
 		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err == nil {
+			err = db.AutoMigrate(&models.Users{}, &models.RefreshTokens{})
 			return db, nil
 		}
 		rem := retr - i

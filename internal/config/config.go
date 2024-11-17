@@ -10,9 +10,11 @@ import (
 // Config структура конфигурации приложения
 type Config struct {
 	Server struct {
-		AppName string `mapstructure:"app_name"`
-		Port    string
-		Debug   bool
+		AppName       string `mapstructure:"app_name"`
+		Port          string
+		Debug         bool
+		JwtSecretPath string `mapstructure:"jwt_secret_path"`
+		JwtPublicPath string `mapstructure:"jwt_public_path"`
 	}
 	Database struct {
 		Host     string
@@ -54,6 +56,8 @@ func setupFlags() {
 	pflag.Bool("debug", false, "Включить режим отладки в терминале")
 	pflag.String("db", "", "Строка подключения к базе данных (формат: 'host=localhost port=5432 user=Cracher password=Gleb dbname=test sslmode=disable)")
 	pflag.String("configPath", "config/config.yaml", "Путь до файла конфигурации")
+	pflag.String("jwtSecret", "", "Путь до файла с приватным jwt ключом шифрования")
+	pflag.String("jwtPublic", "", "Путь до файла с публичным jwt ключом шифрования")
 
 	pflag.Parse()
 }
@@ -68,6 +72,12 @@ func updateConfigWithFlags() {
 	}
 	if pflag.Lookup("db").Changed {
 		parseDatabaseURL(pflag.Lookup("db").Value.String())
+	}
+	if pflag.Lookup("jwtSecret").Changed {
+		viper.Set("server.jwt_secret_path", pflag.Lookup("jwtSecret").Value.String())
+	}
+	if pflag.Lookup("jwtPublic").Changed {
+		viper.Set("server.jwt_public_path", pflag.Lookup("jwtPublic").Value.String())
 	}
 }
 

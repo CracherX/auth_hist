@@ -2,7 +2,8 @@ server:
   app_name: "Authorization service"
   port: ":8080"
   debug: true
-  secret_path: "secrets/secret.txt"
+  jwt_secret_path: "secret/secret.txt"
+  jwt_public_path: "secret/public.txt"
 database:
   user: "Cracher"
   password: "10840"
