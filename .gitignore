@@ -24,5 +24,8 @@ go.work.sum
 # env file
 .env
 
-#Goland файлы
+# Goland файлы
 .idea
+
+# Секреточка
+.secret

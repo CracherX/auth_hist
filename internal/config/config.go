@@ -23,6 +23,7 @@ type Config struct {
 		Password string
 		Name     string
 		SslMode  string `mapstructure:"ssl_mode"`
+		Retries  int
 	}
 }
 
