@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/CracherX/auth_hist/internal/dto"
 	"github.com/CracherX/auth_hist/internal/services"
 	"github.com/CracherX/auth_hist/internal/storage/models"
@@ -19,6 +20,7 @@ type AuthService interface {
 	CreateAccessTkn(id int, rid int, ip string) (string, error)
 	RefreshTkns(accTkn string, refTkn string, ip string) (string, string, error)
 	Register(request *dto.RegisterRequest) error
+	GetUser(dto *dto.GetUserRequest) (*models.Users, error)
 }
 
 type Logger interface {
@@ -82,6 +84,9 @@ func (ep *Endpoint) Auth(w http.ResponseWriter, r *http.Request) {
 		dto.Response(w, http.StatusInternalServerError, "Internal Server Response", "Внутренняя ошибка сервера, обратитесь к техническому специалисту")
 		return
 	}
+
+	w.Header().Add("Content-Type", "application/json")
+
 	err = json.NewEncoder(w).Encode(&dto.TokenResponse{
 		AccessToken:  accTkn,
 		RefreshToken: refTkn,
@@ -99,6 +104,7 @@ func (ep *Endpoint) Refresh(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&reqDat)
 	err = ep.Validator.Struct(&reqDat)
 	if err != nil {
+		fmt.Println(err.Error())
 		ep.Logger.Info("Bad Request на запрос рефреш операции", zap.String("IP", reqDat.IP))
 		dto.Response(w, http.StatusBadRequest, "Bad Request", "Обратитесь к документации и заполните тело запроса правильно")
 		return
@@ -121,6 +127,9 @@ func (ep *Endpoint) Refresh(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	w.Header().Add("Content-Type", "application/json")
+
 	err = json.NewEncoder(w).Encode(&dto.TokenResponse{
 		AccessToken:  accTkn,
 		RefreshToken: refTkn,
@@ -148,7 +157,7 @@ func (ep *Endpoint) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, driver.ErrBadConn):
 			ep.Logger.Error("Ошибка подключения к БД при выполнении запроса рефреш операции")
 			dto.Response(w, http.StatusBadGateway, "Bad Gateway", "Ошибка в работе внешних сервисов")
-		case errors.Is(err, gorm.ErrDuplicatedKey):
+		case errors.Is(err, gorm.ErrRegistered):
 			ep.Logger.Info("Попытка регистрации уже существующего пользователя")
 			dto.Response(w, http.StatusConflict, "Conflict", "Пользователь с таким Email или именем уже существует")
 		default:
@@ -158,4 +167,48 @@ func (ep *Endpoint) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dto.Response(w, http.StatusCreated, "Created", "Новый пользователь успешно зарегистрирован!")
+}
+
+func (ep *Endpoint) GetUser(w http.ResponseWriter, r *http.Request) {
+	vars := r.URL.Query()
+	data := &dto.GetUserRequest{AccessToken: vars.Get("jwt")}
+	err := ep.Validator.Struct(data)
+	if err != nil {
+		ep.Logger.Info("Bad Request на запрос получения данных о пользователях", zap.String("Ошибка", err.Error()))
+		dto.Response(w, http.StatusBadRequest, "Bad Request", "Обратитесь к документации и заполните тело запроса правильно")
+		return
+	}
+	user, err := ep.Service.GetUser(data)
+	if err != nil {
+		switch {
+		case errors.Is(err, driver.ErrBadConn):
+			ep.Logger.Error("Ошибка подключения к БД при выполнении запроса рефреш операции")
+			dto.Response(w, http.StatusBadGateway, "Bad Gateway", "Ошибка в работе внешних сервисов")
+		case errors.Is(err, services.ErrInvalidToken):
+			ep.Logger.Info(err.Error())
+			dto.Response(w, http.StatusUnauthorized, "Unauthorized", "Access токен не валиден")
+		case errors.Is(err, jwt.ErrTokenExpired):
+			ep.Logger.Info(err.Error())
+			dto.Response(w, http.StatusUnauthorized, "Unauthorized", "Срок действия токена истек")
+		default:
+			ep.Logger.Error("Ошибка при выполнении операции получения данных пользователя", zap.String("Ошибка", err.Error()))
+			dto.Response(w, http.StatusInternalServerError, "Internal Server Response", "Внутренняя ошибка сервера, обратитесь к техническому специалисту")
+		}
+		return
+	}
+	res := dto.UserResponse{
+		ID:       user.ID,
+		Username: user.Username,
+		Password: user.Password,
+		Email:    user.Email,
+		IsAdmin:  user.IsAdmin,
+	}
+	w.Header().Add("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(&res)
+	if err != nil {
+		ep.Logger.Error("Ошибка записи в Response Writer во время выполнения запроса получения данных пользователя")
+		dto.Response(w, http.StatusInternalServerError, "Internal Server Response", "Внутренняя ошибка сервера, обратитесь к техническому специалисту")
+		return
+	}
 }

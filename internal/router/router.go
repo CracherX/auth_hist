@@ -9,6 +9,7 @@ type AuthEndpoint interface {
 	Auth(w http.ResponseWriter, r *http.Request)
 	Refresh(w http.ResponseWriter, r *http.Request)
 	RegisterUser(w http.ResponseWriter, r *http.Request)
+	GetUser(w http.ResponseWriter, r *http.Request)
 }
 
 // Setup устанавливает главный роутер
@@ -23,5 +24,6 @@ func Auth(mr *mux.Router, ep AuthEndpoint) *mux.Router {
 	authRoute.HandleFunc("/access", ep.Auth).Methods(http.MethodPost)
 	authRoute.HandleFunc("/refresh", ep.Refresh).Methods(http.MethodPost)
 	authRoute.HandleFunc("/register", ep.RegisterUser).Methods(http.MethodPost)
+	authRoute.HandleFunc("/profile", ep.GetUser).Methods(http.MethodGet)
 	return authRoute
 }

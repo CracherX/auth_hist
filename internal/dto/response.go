@@ -11,6 +11,14 @@ type TokenResponse struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
+type UserResponse struct {
+	ID       int    `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+	IsAdmin  bool   `json:"isAdmin"`
+}
+
 type e struct {
 	Status  int    `json:"status"`
 	Error   string `json:"error"`
@@ -30,5 +38,6 @@ func Response(w http.ResponseWriter, status int, errMsg string, details ...strin
 	if len(details) > 0 {
 		errorResponse.Details = details[0]
 	}
-	json.NewEncoder(w).Encode(errorResponse)
+	w.Header().Add("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(errorResponse)
 }

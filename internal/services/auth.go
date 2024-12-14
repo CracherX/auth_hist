@@ -3,6 +3,7 @@ package services
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"github.com/CracherX/auth_hist/internal/config"
 	"github.com/CracherX/auth_hist/internal/dto"
 	"github.com/CracherX/auth_hist/internal/storage/models"
@@ -29,7 +30,11 @@ func NewAuth(db *gorm.DB, cfg *config.Config) *AuthService {
 
 func (as *AuthService) Login(usr string, pass string) (int, error) {
 	var user models.Users
-	err := as.DB.Where("username = ? AND password = ?", usr, pass).First(&user).Error
+	err := as.DB.Where("username = ?", usr).First(&user).Error
+	if err != nil {
+		return 0, gorm.ErrRecordNotFound
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(pass))
 	if err != nil {
 		return 0, gorm.ErrRecordNotFound
 	}
@@ -88,7 +93,7 @@ func (as *AuthService) RefreshTkns(accTkn string, refTkn string, ip string) (str
 			return loadKey(as.Config.Server.JwtPublicPath, true)
 		},
 	)
-	if err != nil || !token.Valid {
+	if (err != nil || !token.Valid) && !errors.Is(err, jwt.ErrTokenExpired) {
 		return "", "", ErrInvalidToken
 	}
 	claims := token.Claims.(jwt.MapClaims)
@@ -117,7 +122,7 @@ func (as *AuthService) RefreshTkns(accTkn string, refTkn string, ip string) (str
 	if err != nil {
 		return "", "", err
 	}
-	return newRefTkn.Token, newAccTkn, nil
+	return newAccTkn, newRefTkn.Token, nil
 }
 
 func (as *AuthService) Register(dto *dto.RegisterRequest) error {
@@ -126,7 +131,6 @@ func (as *AuthService) Register(dto *dto.RegisterRequest) error {
 		Username: dto.Username,
 		Password: string(hash),
 		Email:    dto.Email,
-		About:    dto.About,
 	}
 	err = as.DB.Create(&newUser).Error
 	if err != nil {
@@ -135,12 +139,38 @@ func (as *AuthService) Register(dto *dto.RegisterRequest) error {
 	return nil
 }
 
+func (as *AuthService) GetUser(dto *dto.GetUserRequest) (*models.Users, error) {
+	var user models.Users
+
+	tkn, err := jwt.Parse(dto.AccessToken,
+		func(token *jwt.Token) (interface{}, error) {
+			return loadKey(as.Config.Server.JwtPublicPath, true)
+		})
+	if err != nil {
+		return nil, err
+	}
+	if !tkn.Valid {
+		return nil, ErrInvalidToken
+	}
+	claims := tkn.Claims.(jwt.MapClaims)
+
+	id := claims["sub"]
+
+	err = as.DB.First(&user, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func loadKey(path string, public bool) (key interface{}, err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
 
 	data, err := io.ReadAll(file)
 	if err != nil {

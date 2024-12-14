@@ -8,7 +8,7 @@ type Users struct {
 	Username string `gorm:"type:varchar(60);uniqueIndex;not null"`
 	Password string `gorm:"type:varchar(255);not null"`
 	Email    string `gorm:"type:varchar(60);uniqueIndex;not null"`
-	About    string `gorm:"type:text"`
+	IsAdmin  bool   `gorm:"type:boolean;not null;default:false"`
 }
 
 // RefreshTokens модель Refresh токенов БД.
@@ -22,5 +22,5 @@ type RefreshTokens struct {
 	IP        string    `gorm:"type:varchar(45);not null"`
 	Revoked   bool      `gorm:"type:boolean;not null;default:false"`
 
-	User Users `gorm:"foreignKey:UserId"`
+	User Users `gorm:"foreignKey:UserId;constraint:OnDelete:CASCADE"`
 }
