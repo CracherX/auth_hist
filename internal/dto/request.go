@@ -21,3 +21,8 @@ type RefreshRequest struct {
 type GetUserRequest struct {
 	AccessToken string `validate:"required,jwt"`
 }
+
+type GetUsersRequest struct {
+	Limit  int `json:"limit" validate:"gte=0"`  // Лимит записей
+	Offset int `json:"offset" validate:"gte=0"` // Смещение для пагинации
+}

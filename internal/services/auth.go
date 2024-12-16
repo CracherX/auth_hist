@@ -163,6 +163,38 @@ func (as *AuthService) GetUser(dto *dto.GetUserRequest) (*models.Users, error) {
 	return &user, nil
 }
 
+// GetUsers возвращает список пользователей с учетом пагинации
+func (as *AuthService) GetUsers(req *dto.GetUsersRequest) (*dto.GetUsersResponse, error) {
+	var users []models.Users
+	var total int64
+
+	// Считаем общее количество пользователей
+	if err := as.DB.Model(&models.Users{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// Получаем пользователей с учетом лимита и смещения
+	if err := as.DB.Limit(req.Limit).Offset(req.Offset).Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	// Преобразуем пользователей в DTO
+	userResponses := make([]dto.UserResponse, len(users))
+	for i, user := range users {
+		userResponses[i] = dto.UserResponse{
+			ID:       user.ID,
+			Username: user.Username,
+			Email:    user.Email,
+			IsAdmin:  user.IsAdmin,
+		}
+	}
+
+	return &dto.GetUsersResponse{
+		Users: userResponses,
+		Total: total,
+	}, nil
+}
+
 func loadKey(path string, public bool) (key interface{}, err error) {
 	file, err := os.Open(path)
 	if err != nil {

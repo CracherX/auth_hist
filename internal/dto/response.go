@@ -41,3 +41,8 @@ func Response(w http.ResponseWriter, status int, errMsg string, details ...strin
 	w.Header().Add("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(errorResponse)
 }
+
+type GetUsersResponse struct {
+	Users []UserResponse `json:"users"`
+	Total int64          `json:"total"` // Общее количество пользователей
+}

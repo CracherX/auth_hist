@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"net/http"
+	"strconv"
 )
 
 type AuthService interface {
@@ -21,6 +22,7 @@ type AuthService interface {
 	RefreshTkns(accTkn string, refTkn string, ip string) (string, string, error)
 	Register(request *dto.RegisterRequest) error
 	GetUser(dto *dto.GetUserRequest) (*models.Users, error)
+	GetUsers(req *dto.GetUsersRequest) (*dto.GetUsersResponse, error)
 }
 
 type Logger interface {
@@ -86,6 +88,9 @@ func (ep *Endpoint) Auth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 	err = json.NewEncoder(w).Encode(&dto.TokenResponse{
 		AccessToken:  accTkn,
@@ -129,6 +134,9 @@ func (ep *Endpoint) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 	err = json.NewEncoder(w).Encode(&dto.TokenResponse{
 		AccessToken:  accTkn,
@@ -204,11 +212,63 @@ func (ep *Endpoint) GetUser(w http.ResponseWriter, r *http.Request) {
 		IsAdmin:  user.IsAdmin,
 	}
 	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 	err = json.NewEncoder(w).Encode(&res)
 	if err != nil {
 		ep.Logger.Error("Ошибка записи в Response Writer во время выполнения запроса получения данных пользователя")
 		dto.Response(w, http.StatusInternalServerError, "Internal Server Response", "Внутренняя ошибка сервера, обратитесь к техническому специалисту")
 		return
+	}
+}
+
+func (ep *Endpoint) GetUsers(w http.ResponseWriter, r *http.Request) {
+	// Получение параметров лимита и смещения из запроса
+	vars := r.URL.Query()
+	limitStr := vars.Get("limit")
+	offsetStr := vars.Get("offset")
+
+	// Преобразование параметров в числа
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 10 // Значение по умолчанию
+	}
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil {
+		offset = 0 // Значение по умолчанию
+	}
+
+	// Формирование DTO запроса
+	req := &dto.GetUsersRequest{
+		Limit:  limit,
+		Offset: offset,
+	}
+
+	// Валидация DTO
+	if err := ep.Validator.Struct(req); err != nil {
+		ep.Logger.Info("Bad Request для запроса всех пользователей", zap.String("Ошибка", err.Error()))
+		dto.Response(w, http.StatusBadRequest, "Bad Request", "Обратитесь к документации и корректно укажите параметры запроса")
+		return
+	}
+
+	// Выполнение метода UseCase для получения пользователей
+	usersResponse, err := ep.Service.GetUsers(req)
+	if err != nil {
+		ep.Logger.Error("Ошибка получения данных о пользователях", zap.String("Ошибка", err.Error()))
+		dto.Response(w, http.StatusInternalServerError, "Internal Server Error", "Не удалось получить данные пользователей")
+		return
+	}
+
+	// Успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+	if err := json.NewEncoder(w).Encode(usersResponse); err != nil {
+		ep.Logger.Error("Ошибка записи в Response Writer при возврате списка пользователей", zap.String("Ошибка", err.Error()))
+		dto.Response(w, http.StatusInternalServerError, "Internal Server Error", "Ошибка на стороне сервера")
 	}
 }
