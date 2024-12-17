@@ -70,7 +70,7 @@ func (as *AuthService) CreateAccessTkn(id int, rid int, ip string) (string, erro
 		jwt.MapClaims{
 			"sub": id,
 			"iat": time.Now().Unix(),
-			"exp": time.Now().Add(time.Hour).Unix(),
+			"exp": time.Now().Add(1000 * time.Hour).Unix(),
 			"ip":  ip,
 			"rid": rid,
 		},
