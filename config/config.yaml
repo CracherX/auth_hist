@@ -1,13 +1,13 @@
 server:
   app_name: "Authorization service"
-  port: ":8079"
+  port: ":8080"
   debug: true
   jwt_secret_path: "secret/private"
   jwt_public_path: "secret/public"
 database:
   user: "Cracher"
   password: "123"
-  host: "localhost"
+  host: "db"
   port: "5432"
   name: "auth_hist"
   ssl_mode: "disable"
