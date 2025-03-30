@@ -6,6 +6,7 @@ import "time"
 type Users struct {
 	ID       int    `gorm:"type:int;primaryKey"`
 	Username string `gorm:"type:varchar(60);uniqueIndex;not null"`
+	Picture  string `gorm:"type:varchar(255)"`
 	Password string `gorm:"type:varchar(255);not null"`
 	Email    string `gorm:"type:varchar(60);uniqueIndex;not null"`
 	IsAdmin  bool   `gorm:"type:boolean;not null;default:false"`

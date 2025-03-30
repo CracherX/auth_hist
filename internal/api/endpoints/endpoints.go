@@ -207,6 +207,7 @@ func (ep *Endpoint) GetUser(w http.ResponseWriter, r *http.Request) {
 	res := dto.UserResponse{
 		ID:       user.ID,
 		Username: user.Username,
+		Picture:  user.Picture,
 		Password: user.Password,
 		Email:    user.Email,
 		IsAdmin:  user.IsAdmin,

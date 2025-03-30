@@ -130,6 +130,7 @@ func (as *AuthService) Register(dto *dto.RegisterRequest) error {
 	newUser := models.Users{
 		Username: dto.Username,
 		Password: string(hash),
+		Picture:  dto.Picture,
 		Email:    dto.Email,
 	}
 	err = as.DB.Create(&newUser).Error
@@ -186,6 +187,7 @@ func (as *AuthService) GetUsers(req *dto.GetUsersRequest) (*dto.GetUsersResponse
 			Username: user.Username,
 			Email:    user.Email,
 			IsAdmin:  user.IsAdmin,
+			Picture:  user.Picture,
 		}
 	}
 

@@ -15,6 +15,7 @@ type UserResponse struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Picture  string `json:"picture"`
 	Email    string `json:"email"`
 	IsAdmin  bool   `json:"isAdmin"`
 }
